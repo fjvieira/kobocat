@@ -1,22 +1,26 @@
-# coding: utf-8
 import datetime
+
 from django.contrib.auth.models import User
 from django.contrib.gis.db import models
 
+from onadata.apps.logger.models import XForm
 
-# TODO: Refactor to UserSubmissionModel in both Kobocat and KPI
-class SubmissionCounter(models.Model):
+
+class XFormSubmissionCounter(models.Model):
     user = models.ForeignKey(
         User,
-        related_name='submissioncounter',
+        related_name='xformsubmissioncounter',
+        null=True,
+        on_delete=models.CASCADE,
+    )
+    xform = models.ForeignKey(
+        XForm,
+        related_name='xformsubmissioncounter',
         null=True,
         on_delete=models.CASCADE,
     )
     count = models.IntegerField(default=0)
     timestamp = models.DateField()
-
-    class Meta:
-        unique_together = ('user', 'timestamp')
 
     def save(self, *args, **kwargs):
         if not self.timestamp:
@@ -24,4 +28,4 @@ class SubmissionCounter(models.Model):
             first_day_of_month = today.replace(day=1)
             self.timestamp = first_day_of_month
 
-        super().save(*args, **kwargs) 
+        super().save(*args, **kwargs)
