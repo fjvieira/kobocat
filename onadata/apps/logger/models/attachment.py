@@ -1,10 +1,12 @@
 # coding: utf-8
 import mimetypes
 import os
+import subprocess
 
 from django.conf import settings
 from django.db import models
 from django.utils.http import urlencode
+from moviepy import editor as mp
 
 from onadata.libs.utils.hash import get_hash
 from .instance import Instance
@@ -26,6 +28,36 @@ def upload_to(attachment, filename):
 
 def hash_attachment_contents(contents):
     return get_hash(contents)
+
+
+def convert_audio(pk):
+    to_convert = Attachment.objects.get(pk)
+    file_path, file_extension = os.path.splitext(to_convert.media_file.url)
+    converted_name = f"{file_path}.mp3"
+    subprocess.run(['ffmpeg', '-i', to_convert.media_file, '-ac', '1', '-ar', '16000', converted_name])
+    Attachment.objects.create(
+        instance=to_convert.instance,
+
+    )
+
+
+def remove_video(pk):
+    video_file = Attachment.objects.get(pk)
+    video = mp.VideoFileClip(video_file)
+    attachment_filename = video_file.media_file.url
+    file_path, file_extension = os.path.splitext(attachment_filename)
+    new_file = f"{file_path}.mp3"
+    audio = video.audio.write_audiofile(new_file)
+    Attachment.objects.create(
+        instance=video_file.instance,
+        media_file=audio,
+    )
+
+
+    # video_file = mp.VideoFileClip(self.audio_file)
+    # new_file = f"{self.file_path}/{self.file_name}.mp3"
+    # video_file.audio.write_audiofile(new_file)
+    # self.audio_file = new_file
 
 
 class Attachment(models.Model):
@@ -55,6 +87,14 @@ class Attachment(models.Model):
             self.media_file_size = self.media_file.size
 
         super().save(*args, **kwargs)
+
+        media_type, ext = mimetype.split('/')
+        if media_type is 'audio':
+            if ext is not 'mp3':
+                pass
+        # convert file
+        elif media_type is 'video':
+            remove_video()
 
     @property
     def file_hash(self):
