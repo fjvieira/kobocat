@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 from django.contrib.gis.db import models
 from django.contrib.gis.geos import GeometryCollection, Point
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Sum
 from django.db.models.signals import post_delete
 from django.db.models.signals import post_save
 from django.utils import timezone
@@ -18,9 +18,10 @@ from taggit.managers import TaggableManager
 
 from onadata.apps.logger.exceptions import FormInactiveError
 from onadata.apps.logger.fields import LazyDefaultBooleanField
+from onadata.apps.logger.models.submission_counter import SubmissionCounter
 from onadata.apps.logger.models.survey_type import SurveyType
 from onadata.apps.logger.models.xform import XForm
-from onadata.apps.logger.models.submission_counter import SubmissionCounter
+from onadata.apps.logger.models.xform_submission_counter import XFormSubmissionCounter
 from onadata.apps.logger.xform_instance_parser import XFormInstanceParser, \
     clean_and_parse_xml, get_uuid_from_xml
 from onadata.libs.utils.common_tags import (
@@ -91,6 +92,31 @@ def update_xform_submission_count(instance, created, **kwargs):
         )
 
 
+def update_storage_counters(instance, created, **kwargs):
+    if not created:
+        return
+    # `defer_counting` is a Python-only attribute
+    if getattr(instance, 'defer_counting', False):
+        return
+    with transaction.atomic():
+        xform = XForm.objects.only('user_id').get(pk=instance.xform_id)
+        # Update with `F` expression instead of `select_for_update` to avoid
+        # locks, which were mysteriously piling up during periods of high
+        # traffic
+        attachments = instance.attachments.aggregate(sum_of_filesize=Sum('media_file_size'))
+        XForm.objects.filter(pk=instance.xform_id).update(
+            storage_bytes=F('storage_bytes') + attachments.get('sum_of_filesize'),
+        )
+        # Hack to avoid circular imports
+        UserProfile = User.profile.related.related_model
+        profile, created = UserProfile.objects.only('pk').get_or_create(
+            user_id=xform.user_id
+        )
+        UserProfile.objects.filter(pk=profile.pk).update(
+            storage_bytes=F('storage_bytes') + attachments.get('sum_of_filesize'),
+        )
+
+
 def nullify_exports_time_of_last_submission(sender, instance, **kwargs):
     """
     Formerly, "deleting" a submission would set a flag on the `Instance`,
@@ -138,6 +164,42 @@ def update_user_submissions_counter(instance, created, **kwargs):
     )
 
     queryset.update(count=F('count') + 1)
+
+
+def update_xform_submission_counter(instance, created, **kwargs):
+    # change the name to update_xform_stats()
+    """
+    This updates the monthly xform submission counter model.
+    Not to be confused with updating the field on the XForm model.
+    """
+    if not created:
+        return
+    if getattr(instance, 'defer_counting', False):
+        return
+
+    # Querying the database this way because it's faster than querying
+    # the instance model for the data
+    user_id = XForm.objects.values_list('user_id', flat=True).get(
+        pk=instance.xform_id
+    )
+    date_created = instance.date_created
+    first_day_of_month = date(
+        year=date_created.year, month=date_created.month, day=1
+    )
+
+    XFormSubmissionCounter.objects.get_or_create(
+        user_id=user_id,
+        xform=instance.xform,
+        timestamp=first_day_of_month,
+    )
+
+    queryset = XFormSubmissionCounter.objects.filter(
+        user_id=user_id,
+        xform=instance.xform,
+        timestamp=first_day_of_month,
+    )
+
+    queryset.update(count=F('count')+1)
 
 
 def update_xform_submission_count_delete(sender, instance, **kwargs):
@@ -429,6 +491,15 @@ class Instance(models.Model):
 
         super().save(*args, **kwargs)
 
+    def delete(self, *args, **kwargs):
+        with transaction.atomic():
+            Instance.objects.select_for_update().get(pk=self.pk)
+            attachment_sizes = self.attachments.select_for_update().values_list('media_file_size', flat=True)
+            attachments_sum = sum(attachment_sizes)
+            XForm.objects.filter(pk=self.xform_id).update(storage_bytes=F('storage_bytes') - attachments_sum)
+            # queryset.update(count=F('count') + 1)
+            super().delete(*args, **kwargs)
+
     def get_validation_status(self):
         """
         Returns instance validation status.
@@ -450,6 +521,12 @@ post_delete.connect(nullify_exports_time_of_last_submission, sender=Instance,
 
 post_save.connect(update_user_submissions_counter, sender=Instance,
                   dispatch_uid='update_user_submissions_counter')
+
+post_save.connect(update_storage_counters, sender=Instance,
+                  dispatch_uid='update_storage_counters')
+
+post_save.connect(update_xform_submission_counter, sender=Instance,
+                  dispatch_uid='update_xform_submission_counter')
 
 post_delete.connect(update_xform_submission_count_delete, sender=Instance,
                     dispatch_uid='update_xform_submission_count_delete')

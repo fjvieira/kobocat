@@ -3,7 +3,7 @@ import datetime
 from django.contrib.auth.models import User
 from django.contrib.gis.db import models
 
-from onadata.apps.logger.models import XForm
+from onadata.apps.logger.models.xform import XForm
 
 
 class XFormSubmissionCounter(models.Model):
@@ -15,12 +15,15 @@ class XFormSubmissionCounter(models.Model):
     )
     xform = models.ForeignKey(
         XForm,
-        related_name='xformsubmissioncounter',
+        related_name='xformcounter',
         null=True,
         on_delete=models.CASCADE,
     )
     count = models.IntegerField(default=0)
     timestamp = models.DateField()
+
+    class Meta:
+        unique_together = ('xform', 'timestamp')
 
     def save(self, *args, **kwargs):
         if not self.timestamp:

@@ -38,6 +38,7 @@ class UserProfile(models.Model):
     phonenumber = models.CharField(max_length=30, blank=True)
     created_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE)
     num_of_submissions = models.IntegerField(default=0)
+    storage_bytes = models.IntegerField(default=0)
     metadata = JSONField(default={}, blank=True)
 
     def __str__(self):

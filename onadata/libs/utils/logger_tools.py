@@ -43,8 +43,10 @@ from onadata.apps.logger.models.attachment import (
 from onadata.apps.logger.models.instance import (
     InstanceHistory,
     get_id_string_from_xml_str,
-    update_xform_submission_count,
+    update_storage_counters,
     update_user_submissions_counter,
+    update_xform_submission_count,
+    update_xform_submission_counter,
 )
 from onadata.apps.logger.models.xform import XLSFormError
 from onadata.apps.logger.xform_instance_parser import (
@@ -322,8 +324,10 @@ def save_submission(
     if getattr(instance, 'defer_counting', False):
         # Remove the Python-only attribute
         del instance.defer_counting
-        update_xform_submission_count(instance=instance, created=True)
+        update_storage_counters(instance=instance, created=True)
         update_user_submissions_counter(instance=instance, created=True)
+        update_xform_submission_count(instance=instance, created=True)
+        update_xform_submission_counter(instance=instance, created=True)
 
     return instance
 
