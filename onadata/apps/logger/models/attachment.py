@@ -7,6 +7,7 @@ from django.conf import settings
 from django.db import models
 from django.utils.http import urlencode
 from moviepy import editor as mp
+from pydub import AudioSegment
 
 from onadata.libs.utils.hash import get_hash
 from .instance import Instance
@@ -32,12 +33,16 @@ def hash_attachment_contents(contents):
 
 def convert_audio(pk):
     to_convert = Attachment.objects.get(pk)
+    file = to_convert.media_file.url
     file_path, file_extension = os.path.splitext(to_convert.media_file.url)
+    file_extension = file_extension.strip('.')
     converted_name = f"{file_path}.mp3"
-    subprocess.run(['ffmpeg', '-i', to_convert.media_file, '-ac', '1', '-ar', '16000', converted_name])
+    audio = AudioSegment.from_file(file, file_extension)
+    converted = audio.export(converted_name, 'mp3')
+    # subprocess.run(['ffmpeg', '-i', to_convert.media_file, '-ac', '1', '-ar', '16000', converted_name])
     Attachment.objects.create(
         instance=to_convert.instance,
-
+        media_file=converted,
     )
 
 

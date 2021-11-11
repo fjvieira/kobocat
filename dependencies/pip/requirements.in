@@ -40,6 +40,8 @@ amqp
 # new export code relies on
 pandas>=0.12.0
 elaphe3
+moviepy
+pydub
 
 django-pure-pagination
 
