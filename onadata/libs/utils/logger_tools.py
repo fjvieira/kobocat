@@ -12,6 +12,7 @@ from dict2xml import dict2xml
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError, PermissionDenied
+from django.core.files import File
 from django.core.files.storage import get_storage_class
 from django.core.mail import mail_admins
 from django.db import IntegrityError, transaction
@@ -28,6 +29,8 @@ from django.utils import timezone
 from django.utils.encoding import DjangoUnicodeDecodeError, smart_str
 from django.utils.translation import ugettext as _
 from modilabs.utils.subprocess_timeout import ProcessTimedOut
+from moviepy import editor as mp
+from pydub import AudioSegment
 from pyxform.errors import PyXFormError
 from pyxform.xform2json import create_survey_element_from_xml
 from xml.dom import Node
@@ -122,6 +125,31 @@ def _get_instance(
         instance.save()
 
     return instance
+
+
+def convert_audio(file, instance, attachment_filename):
+    filename, file_extension = os.path.splitext(attachment_filename)
+    file_extension = file_extension.strip('.')
+    file.seek(0)
+    audio = AudioSegment.from_file(file)
+    converted_name = f"{file}.mp3"
+    converted = audio.export(converted_name, format='mp3')
+    testing = File(converted)
+    Attachment.objects.create(
+        instance=instance,
+        media_file=testing,
+    )
+
+
+def remove_video(file, instance, attachment_filename):
+    video = mp.VideoFileClip(file)
+    file_path, file_extension = os.path.splitext(attachment_filename)
+    new_file = f"{file_path}.mp3"
+    audio = video.audio.write_audiofile(new_file)
+    Attachment.objects.create(
+        instance=instance,
+        media_file=audio,
+    )
 
 
 def dict2xform(jsform, form_id):
@@ -264,6 +292,15 @@ def save_attachments(instance, media_files):
         Attachment.objects.create(
             instance=instance,
             media_file=f, mimetype=f.content_type)
+
+        media_type, ext = f.content_type.split('/')
+        if media_type == 'audio':
+            if ext != 'mp3':
+                convert_audio(f, instance, attachment_filename)
+        # convert file
+        elif media_type == 'video':
+            remove_video(f, instance, attachment_filename)
+
         any_new_attachment = True
     return any_new_attachment
 

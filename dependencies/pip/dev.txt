@@ -43,6 +43,7 @@ chardet==3.0.4
 decorator==4.4.2
     # via
     #   ipython
+    #   moviepy
     #   traitlets
 defusedxml==0.6.0
     # via djangorestframework-xml
@@ -137,6 +138,10 @@ httmock==1.3.0
     # via -r dependencies/pip/dev.in
 idna==2.10
     # via requests
+imageio==2.10.3
+    # via moviepy
+imageio-ffmpeg==0.4.5
+    # via moviepy
 ipdb==0.13.3
     # via -r dependencies/pip/dev.in
 ipython==7.16.1
@@ -173,10 +178,15 @@ mongomock==3.19.0
     # via -r dependencies/pip/dev.in
 more-itertools==8.4.0
     # via pytest
+moviepy==1.0.3
+    # via -r dependencies/pip/requirements.in
 nose==1.3.7
     # via django-nose
 numpy==1.19.0
-    # via pandas
+    # via
+    #   imageio
+    #   moviepy
+    #   pandas
 oauthlib==3.1.0
     # via django-oauth-toolkit
 openpyxl==3.0.4
@@ -191,12 +201,15 @@ pexpect==4.8.0
     # via ipython
 pickleshare==0.7.5
     # via ipython
-pillow==7.2.0
+pillow==8.4.0
     # via
     #   -r dependencies/pip/requirements.in
     #   elaphe3
+    #   imageio
 pluggy==0.13.1
     # via pytest
+proglog==0.1.9
+    # via moviepy
 prompt-toolkit==3.0.5
     # via ipython
 psycopg2-binary==2.8.5
@@ -205,6 +218,8 @@ ptyprocess==0.6.0
     # via pexpect
 py==1.9.0
     # via pytest
+pydub==0.25.1
+    # via -r dependencies/pip/requirements.in
 pygments==2.6.1
     # via ipython
 pymongo==3.10.1
@@ -247,10 +262,11 @@ requests==2.24.0
     # via
     #   django-oauth-toolkit
     #   httmock
+    #   moviepy
     #   transifex-client
 s3transfer==0.3.3
     # via boto3
-https://bitbucket.org/fomcl/savreaderwriter/downloads/savReaderWriter-3.3.0.zip#egg=savreaderwriter
+savreaderwriter @ https://bitbucket.org/fomcl/savreaderwriter/downloads/savReaderWriter-3.3.0.zip
     # via -r dependencies/pip/requirements.in
 sentinels==1.0.0
     # via mongomock
@@ -283,6 +299,10 @@ text-unidecode==1.3
     # via python-slugify
 tlslite-ng==0.7.5
     # via gdata-python3
+tqdm==4.62.3
+    # via
+    #   moviepy
+    #   proglog
 traceback2==1.4.0
     # via unittest2
 traitlets==4.3.3
