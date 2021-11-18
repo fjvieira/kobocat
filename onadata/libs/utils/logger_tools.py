@@ -129,10 +129,9 @@ def _get_instance(
 
 def convert_audio(file, instance, attachment_filename):
     filename, file_extension = os.path.splitext(attachment_filename)
-    file_extension = file_extension.strip('.')
     file.seek(0)
     audio = AudioSegment.from_file(file)
-    converted_name = f"{file}.mp3"
+    converted_name = f"{filename}.mp3"
     converted = audio.export(converted_name, format='mp3')
     testing = File(converted)
     Attachment.objects.create(
@@ -142,10 +141,10 @@ def convert_audio(file, instance, attachment_filename):
 
 
 def remove_video(file, instance, attachment_filename):
+    file.seek(0)
     video = mp.VideoFileClip(file)
     file_path, file_extension = os.path.splitext(attachment_filename)
-    new_file = f"{file_path}.mp3"
-    audio = video.audio.write_audiofile(new_file)
+    audio = video.audio
     Attachment.objects.create(
         instance=instance,
         media_file=audio,
@@ -294,7 +293,7 @@ def save_attachments(instance, media_files):
             media_file=f, mimetype=f.content_type)
 
         media_type, ext = f.content_type.split('/')
-        if media_type == 'audio':
+        if media_type == 'audio' or media_type == 'video':
             if ext != 'mp3':
                 convert_audio(f, instance, attachment_filename)
         # convert file

@@ -48,6 +48,7 @@ RUN curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
 RUN apt-get -qq update && \
     apt-get -qq -y install \
         cron \
+        ffmpeg \
         gdal-bin \
         gettext \
         gosu \
