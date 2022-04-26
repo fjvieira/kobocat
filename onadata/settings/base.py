@@ -351,9 +351,12 @@ LOCALE_PATHS = [os.path.join(PROJECT_ROOT, 'locale'), ]
 DEBUG = env.bool('DJANGO_DEBUG', True)
 
 # Database (i.e. PostgreSQL)
-DATABASES = {
-    'default': env.db(default="sqlite:///%s/db.sqlite3" % PROJECT_ROOT)
-}
+DATABASES = {}
+if 'KPI_DATABASE_URL' in os.environ:
+    DATABASES['default'] = env.db_url('KC_DATABASE_URL')
+else:
+    DATABASES['default'] = env.db_url('DATABASE_URL')
+
 # Replacement for TransactionMiddleware
 DATABASES['default']['ATOMIC_REQUESTS'] = True
 
