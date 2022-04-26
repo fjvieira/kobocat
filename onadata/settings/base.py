@@ -352,10 +352,10 @@ DEBUG = env.bool('DJANGO_DEBUG', True)
 
 # Database (i.e. PostgreSQL)
 DATABASES = {}
-if 'KPI_DATABASE_URL' in os.environ:
-    DATABASES['default'] = env.db_url('KC_DATABASE_URL')
+if 'KPI_DATABASE_URL' in env.ENVIRON:
+    DATABASES['default'] = env.db_url(default='KC_DATABASE_URL')
 else:
-    DATABASES['default'] = env.db_url('DATABASE_URL')
+    DATABASES['default'] = env.db_url(default='DATABASE_URL')
 
 # Replacement for TransactionMiddleware
 DATABASES['default']['ATOMIC_REQUESTS'] = True
